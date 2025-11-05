@@ -1,0 +1,36 @@
+# docker-compose.yml
+version: '3.9'
+services:
+  fastapi:
+    build: ./fastAPI_wines
+    container_name: fastapi_wines
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fastAPI_wines:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    # Use an image that bundles the pgvector extension so the server supports the `vector` type.
+    # ankane/pgvector is a commonly used image prebuilt with pgvector for postgres.
+    image: ankane/pgvector:latest
+    container_name: postgres16
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 5123
+      POSTGRES_DB: embedings_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata/data:/var/lib/postgresql/data
+      - ./pgdata/init:/docker-entrypoint-initdb.d/init
+      - ./pgdata/insert_winereviews_massive_pg.sql:/docker-entrypoint-initdb.d/insert_winereviews_massive_pg.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d embedings_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
